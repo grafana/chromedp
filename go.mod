@@ -1,4 +1,4 @@
-module github.com/chromedp/chromedp
+module github.com/grafana/chromedp
 
 go 1.25.0
 
