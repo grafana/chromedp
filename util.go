@@ -9,9 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"slices"
+
 	"github.com/chromedp/cdproto"
 	"github.com/chromedp/cdproto/cdp"
-	"slices"
 )
 
 // forceIP tries to force the host component in urlstr to be an IP address.
