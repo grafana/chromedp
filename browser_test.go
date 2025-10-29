@@ -2,10 +2,11 @@ package chromedp
 
 import (
 	"bytes"
+	"testing"
+
 	"github.com/chromedp/cdproto"
 	jsonv2 "github.com/go-json-experiment/json"
 	"github.com/go-json-experiment/json/jsontext"
-	"testing"
 )
 
 func TestUnmarshalWithDefaultOptions(t *testing.T) {

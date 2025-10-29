@@ -52,7 +52,7 @@ func setupExecAllocator(opts ...ExecAllocatorOption) *ExecAllocator {
 // if the given parent context doesn't have an allocator set up. Do not modify
 // this global; instead, use NewExecAllocator. See [ExampleExecAllocator].
 //
-// [ExampleExecAllocator]: https://pkg.go.dev/github.com/chromedp/chromedp#example-ExecAllocator
+// [ExampleExecAllocator]: https://pkg.go.dev/github.com/grafana/chromedp#example-ExecAllocator
 var DefaultExecAllocatorOptions = [...]ExecAllocatorOption{
 	NoFirstRun,
 	NoDefaultBrowserCheck,

@@ -12,7 +12,7 @@ Package `chromedp` is a faster, simpler way to drive browsers supporting the
 Install in the usual Go way:
 
 ```sh
-$ go get -u github.com/chromedp/chromedp
+$ go get -u github.com/grafana/chromedp
 ```
 
 ## Examples
