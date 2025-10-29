@@ -103,9 +103,10 @@ type ExecAllocatorOption = func(*ExecAllocator)
 // ExecAllocator is an Allocator which starts new browser processes on the host
 // machine.
 type ExecAllocator struct {
-	execPath  string
-	initFlags map[string]any
-	initEnv   []string
+	execPath          string
+	initFlags         map[string]any
+	ignoreExistingEnv bool
+	initEnv           []string
 
 	// Chrome will sometimes fail to print the websocket, or run for a long
 	// time, without properly exiting. To avoid blocking forever in those
@@ -195,8 +196,12 @@ func (a *ExecAllocator) Allocate(ctx context.Context, opts ...BrowserOption) (*B
 	// Preserve environment variables set in the (lowest priority) existing
 	// environment, OverrideCmdFunc(), and Env (highest priority)
 	if len(a.initEnv) > 0 || len(cmd.Env) > 0 {
-		cmd.Env = append(os.Environ(), cmd.Env...)
+		if !a.ignoreExistingEnv {
+			cmd.Env = append(os.Environ(), cmd.Env...)
+		}
 		cmd.Env = append(cmd.Env, a.initEnv...)
+	} else if a.ignoreExistingEnv {
+		cmd.Env = []string{}
 	}
 
 	// We must start the cmd before calling cmd.Wait, as otherwise the two
@@ -399,6 +404,14 @@ func findExecPath() string {
 func Flag(name string, value any) ExecAllocatorOption {
 	return func(a *ExecAllocator) {
 		a.initFlags[name] = value
+	}
+}
+
+// WithoutInheritingEnv permits removing all other environment variables from the allocator.
+// When true, only environment variables set via other options will be used; we will not build on the existing environment.
+func WithoutInheritingEnv(ignoreExistingEnv bool) ExecAllocatorOption {
+	return func(a *ExecAllocator) {
+		a.ignoreExistingEnv = ignoreExistingEnv
 	}
 }
 
