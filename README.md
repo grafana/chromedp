@@ -1,3 +1,9 @@
+# FORK
+
+This is a fork of [chromedp/chromedp](https://github.com/chromedp/chromedp).
+If you do not have a specific need for this fork, please use the upstream.
+We do NOT provide support for this fork, beyond what we need ourselves.
+
 # About chromedp
 
 Package `chromedp` is a faster, simpler way to drive browsers supporting the
@@ -69,16 +75,16 @@ to find out of the box.
 
 ## Resources
 
-* [`headless-shell`][docker-headless-shell] - A build of `headless-shell` that is used for testing `chromedp`
-* [chromedp: A New Way to Drive the Web][gophercon-2017-presentation] - GopherCon SG 2017 talk
-* [Chrome DevTools Protocol][devtools-protocol] - Chrome DevTools Protocol reference
-* [chromedp examples][chromedp-examples] - More complicated examples for `chromedp`
-* [`github.com/chromedp/cdproto`][goref-cdproto] - Go reference for the generated Chrome DevTools Protocol API
-* [`github.com/chromedp/pdlgen`][chromedp-pdlgen] - tool used to generate `cdproto`
-* [`github.com/chromedp/chromedp-proxy`][chromedp-proxy] - a simple CDP proxy for logging CDP clients and browsers
+- [`headless-shell`][docker-headless-shell] - A build of `headless-shell` that is used for testing `chromedp`
+- [chromedp: A New Way to Drive the Web][gophercon-2017-presentation] - GopherCon SG 2017 talk
+- [Chrome DevTools Protocol][devtools-protocol] - Chrome DevTools Protocol reference
+- [chromedp examples][chromedp-examples] - More complicated examples for `chromedp`
+- [`github.com/chromedp/cdproto`][goref-cdproto] - Go reference for the generated Chrome DevTools Protocol API
+- [`github.com/chromedp/pdlgen`][chromedp-pdlgen] - tool used to generate `cdproto`
+- [`github.com/chromedp/chromedp-proxy`][chromedp-proxy] - a simple CDP proxy for logging CDP clients and browsers
 
-[chromedp-ci]: https://github.com/chromedp/chromedp/actions/workflows/test.yml (Test CI)
-[chromedp-ci-status]: https://github.com/chromedp/chromedp/actions/workflows/test.yml/badge.svg (Test CI)
+[chromedp-ci]: https://github.com/chromedp/chromedp/actions/workflows/test.yml "Test CI"
+[chromedp-ci-status]: https://github.com/chromedp/chromedp/actions/workflows/test.yml/badge.svg "Test CI"
 [chromedp-examples]: https://github.com/chromedp/examples
 [chromedp-pdlgen]: https://github.com/chromedp/pdlgen
 [chromedp-proxy]: https://github.com/chromedp/chromedp-proxy
@@ -90,5 +96,5 @@ to find out of the box.
 [goref-chromedp-exec-allocator]: https://pkg.go.dev/github.com/chromedp/chromedp#example-ExecAllocator
 [goref-chromedp]: https://pkg.go.dev/github.com/chromedp/chromedp
 [goref-chromedp-status]: https://pkg.go.dev/badge/github.com/chromedp/chromedp.svg
-[release-status]: https://img.shields.io/github/v/release/chromedp/chromedp?display_name=tag&sort=semver (Latest Release)
-[releases]: https://github.com/chromedp/chromedp/releases (Releases)
+[release-status]: https://img.shields.io/github/v/release/chromedp/chromedp?display_name=tag&sort=semver "Latest Release"
+[releases]: https://github.com/chromedp/chromedp/releases "Releases"
