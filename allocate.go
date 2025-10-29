@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sync"
 	"time"
 )
@@ -104,6 +105,7 @@ type ExecAllocatorOption = func(*ExecAllocator)
 // machine.
 type ExecAllocator struct {
 	execPath          string
+	initialArgs       []string
 	initFlags         map[string]any
 	ignoreExistingEnv bool
 	initEnv           []string
@@ -132,7 +134,7 @@ func (a *ExecAllocator) Allocate(ctx context.Context, opts ...BrowserOption) (*B
 		return nil, ErrInvalidContext
 	}
 
-	var args []string
+	args := slices.Clone(a.initialArgs)
 	for name, value := range a.initFlags {
 		switch value := value.(type) {
 		case string:
@@ -396,6 +398,13 @@ func findExecPath() string {
 	// Fall back to something simple and sensible, to give a useful error
 	// message.
 	return "google-chrome"
+}
+
+// InitialArgs is a list of initial command line arguments to pass to Chrome, before flags are appended.
+func InitialArgs(args ...string) ExecAllocatorOption {
+	return func(a *ExecAllocator) {
+		a.initialArgs = args
+	}
 }
 
 // Flag is a generic command line option to pass a flag to Chrome. If the value
