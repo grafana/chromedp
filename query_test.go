@@ -1243,7 +1243,7 @@ func TestFileUpload(t *testing.T) {
 	// create test server
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(res http.ResponseWriter, req *http.Request) {
-		fmt.Fprintf(res, "%s", uploadHTML)
+		_, _ = fmt.Fprintf(res, "%s", uploadHTML)
 	})
 	mux.HandleFunc("/upload", func(res http.ResponseWriter, req *http.Request) {
 		f, _, err := req.FormFile("upload")
@@ -1251,7 +1251,7 @@ func TestFileUpload(t *testing.T) {
 			http.Error(res, err.Error(), http.StatusBadRequest)
 			return
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 
 		buf, err := io.ReadAll(f)
 		if err != nil {
@@ -1259,7 +1259,7 @@ func TestFileUpload(t *testing.T) {
 			return
 		}
 
-		fmt.Fprintf(res, resultHTML, len(buf))
+		_, _ = fmt.Fprintf(res, resultHTML, len(buf))
 	})
 	s := httptest.NewServer(mux)
 	defer s.Close()

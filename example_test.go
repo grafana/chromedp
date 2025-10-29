@@ -25,7 +25,7 @@ import (
 func writeHTML(content string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		io.WriteString(w, strings.TrimSpace(content))
+		_, _ = io.WriteString(w, strings.TrimSpace(content))
 	})
 }
 
@@ -64,7 +64,7 @@ func ExampleRunResponse() {
 	// a link that points to /foo.
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprintf(w, `
+		_, _ = fmt.Fprintf(w, `
 			<head><title>%s</title></head>
 			<body><a id="foo" href="/foo">foo</a></body>
 		`, r.URL.Path)
@@ -119,7 +119,7 @@ func ExampleExecAllocator() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.DisableGPU,

@@ -250,7 +250,7 @@ func openImage(screenshot string) (image.Image, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	img, format, err := image.Decode(f)
 	if err != nil {

@@ -125,7 +125,7 @@ func TestNodeOp(t *testing.T) {
 	t.Parallel()
 
 	s := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		fmt.Fprintf(res, `<!doctype html>
+		_, _ = fmt.Fprintf(res, `<!doctype html>
 <html>
   <head>
     <title>empty test page</title>
