@@ -237,7 +237,7 @@ func testRemoteAllocator(t *testing.T, modifyURL func(wsURL string) string, want
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer stderr.Close()
+	defer func() { _ = stderr.Close() }()
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -261,7 +261,7 @@ func testRemoteAllocator(t *testing.T, modifyURL func(wsURL string) string, want
 			}
 
 			procCancel()
-			cmd.Wait()
+			_ = cmd.Wait()
 			return
 		}
 		if err != nil {
@@ -325,7 +325,7 @@ func testRemoteAllocator(t *testing.T, modifyURL func(wsURL string) string, want
 	case context.DeadlineExceeded:
 		t.Fatalf("did not expect a standard context error: %v", err)
 	}
-	cmd.Wait()
+	_ = cmd.Wait()
 }
 
 func TestExecAllocatorMissingWebsocketAddr(t *testing.T) {

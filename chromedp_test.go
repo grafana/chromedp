@@ -93,10 +93,10 @@ func TestMain(m *testing.M) {
 	cancel()
 
 	if infos, _ := os.ReadDir(allocTempDir); len(infos) > 0 {
-		os.RemoveAll(allocTempDir)
+		_ = os.RemoveAll(allocTempDir)
 		panic(fmt.Sprintf("leaked %d temporary dirs under %s", len(infos), allocTempDir))
 	} else {
-		os.Remove(allocTempDir)
+		_ = os.Remove(allocTempDir)
 	}
 
 	os.Exit(code)
@@ -460,13 +460,13 @@ func TestLargeQuery(t *testing.T) {
 	defer cancel()
 
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "<html><body>\n")
+		_, _ = fmt.Fprintf(w, "<html><body>\n")
 		for i := range 2000 {
-			fmt.Fprintf(w, `<div>`)
-			fmt.Fprintf(w, `<a href="/%d">link %d</a>`, i, i)
-			fmt.Fprintf(w, `</div>`)
+			_, _ = fmt.Fprintf(w, `<div>`)
+			_, _ = fmt.Fprintf(w, `<a href="/%d">link %d</a>`, i, i)
+			_, _ = fmt.Fprintf(w, `</div>`)
 		}
-		fmt.Fprintf(w, "</body></html>\n")
+		_, _ = fmt.Fprintf(w, "</body></html>\n")
 	}))
 	defer s.Close()
 
@@ -493,7 +493,7 @@ func TestDialTimeout(t *testing.T) {
 			t.Fatal(err)
 		}
 		url := "ws://" + l.(*net.TCPListener).Addr().String()
-		defer l.Close()
+		defer func() { _ = l.Close() }()
 
 		ctx := t.Context()
 		_, err = NewBrowser(ctx, url, WithDialTimeout(time.Microsecond))
@@ -509,11 +509,11 @@ func TestDialTimeout(t *testing.T) {
 			t.Fatal(err)
 		}
 		url := "ws://" + l.(*net.TCPListener).Addr().String()
-		defer l.Close()
+		defer func() { _ = l.Close() }()
 		go func() {
 			conn, err := l.Accept()
 			if err == nil {
-				conn.Close()
+				_ = conn.Close()
 			}
 		}()
 
@@ -992,10 +992,10 @@ func TestDownloadIntoDir(t *testing.T) {
 		switch r.URL.Path {
 		case "/data.bin":
 			w.Header().Set("Content-Type", "application/octet-stream")
-			fmt.Fprintf(w, "some binary data")
+			_, _ = fmt.Fprintf(w, "some binary data")
 		default:
 			w.Header().Set("Content-Type", "text/html")
-			fmt.Fprintf(w, `go <a id="download" href="/data.bin">download</a> stuff/`)
+			_, _ = fmt.Fprintf(w, `go <a id="download" href="/data.bin">download</a> stuff/`)
 		}
 	}))
 	defer s.Close()
@@ -1093,7 +1093,7 @@ func TestAttachingToWorkers(t *testing.T) {
 			mux := http.NewServeMux()
 			mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "text/html")
-				fmt.Fprintf(w, `
+				_, _ = fmt.Fprintf(w, `
 					<html>
 						<body>
 							<script>
@@ -1104,7 +1104,7 @@ func TestAttachingToWorkers(t *testing.T) {
 			})
 			mux.HandleFunc("/worker.js", func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "text/javascript")
-				io.WriteString(w, "console.log('I am worker code.');")
+				_, _ = io.WriteString(w, "console.log('I am worker code.');")
 			})
 			ts := httptest.NewServer(mux)
 			defer ts.Close()
@@ -1184,18 +1184,18 @@ func TestRunResponse(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/index", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		indexTmpl.Execute(w, r)
+		_ = indexTmpl.Execute(w, r)
 	})
 	mux.HandleFunc("/200", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprintf(w, "OK")
+		_, _ = fmt.Fprintf(w, "OK")
 	})
 	mux.HandleFunc("/500", func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "500", 500)
 	})
 	mux.HandleFunc("/plain", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
-		fmt.Fprintf(w, "OK")
+		_, _ = fmt.Fprintf(w, "OK")
 	})
 	mux.HandleFunc("/two", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/one", http.StatusMovedPermanently)
@@ -1204,14 +1204,14 @@ func TestRunResponse(t *testing.T) {
 		http.Redirect(w, r, "/zero", http.StatusMovedPermanently)
 	})
 	mux.HandleFunc("/zero", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "OK")
+		_, _ = fmt.Fprintf(w, "OK")
 	})
 	mux.HandleFunc("/infinite", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/infinite", http.StatusMovedPermanently)
 	})
 	mux.HandleFunc("/badiframe", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprintf(w, `<html><body><iframe src="badurl://localhost/"></iframe></body></html>`)
+		_, _ = fmt.Fprintf(w, `<html><body><iframe src="badurl://localhost/"></iframe></body></html>`)
 	})
 	ts := httptest.NewServer(mux)
 	t.Cleanup(ts.Close)
@@ -1368,7 +1368,7 @@ func TestRunResponse_noResponse(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/200", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprintf(w, `<html><body>
+		_, _ = fmt.Fprintf(w, `<html><body>
 		<a id="same" href="/200">same</a>
 		<a id="fragment" href="/200#fragment">fragment</a>
 		</body></html>`)
@@ -1522,7 +1522,7 @@ func TestPDFTemplate(t *testing.T) {
 		buf = make([]byte, l)
 	}
 	n, err := io.ReadFull(b, buf)
-	if err != nil && !(errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF)) {
+	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
 		t.Fatal(err)
 	}
 	buf = buf[:n]

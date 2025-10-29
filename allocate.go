@@ -176,7 +176,7 @@ func (a *ExecAllocator) Allocate(ctx context.Context, opts ...BrowserOption) (*B
 			// We couldn't start the process, so we didn't get to
 			// the goroutine that handles RemoveAll below. Remove it
 			// to not leave an empty directory.
-			os.RemoveAll(dataDir)
+			_ = os.RemoveAll(dataDir)
 		}
 	}()
 
@@ -216,7 +216,7 @@ func (a *ExecAllocator) Allocate(ctx context.Context, opts ...BrowserOption) (*B
 		// TODO: do we care about this error in any scenario? if the
 		// user cancelled the context and killed chrome, this will most
 		// likely just be "signal: killed", which isn't interesting.
-		cmd.Wait()
+		_ = cmd.Wait()
 
 		// Then delete the temporary user data directory, if needed.
 		if removeDir {
@@ -311,12 +311,12 @@ readLoop:
 	copy := func() {}
 	if forward == nil {
 		// We don't need the process's output anymore.
-		rc.Close()
+		_ = rc.Close()
 	} else {
 		// Return a function that will be called later to
 		// copy the rest of the output in a separate goroutine, as we
 		// need to return with the websocket URL.
-		copy = func() { io.Copy(forward, bufr) }
+		copy = func() { _, _ = io.Copy(forward, bufr) }
 	}
 	return wsURL, copy, nil
 }
@@ -580,8 +580,8 @@ func (a *RemoteAllocator) Allocate(ctx context.Context, opts ...BrowserOption) (
 	// for the entire allocator
 	a.wg.Go(func() {
 		<-ctx.Done()
-		Cancel(ctx) // block until all pages are closed
-		cancel()    // close the websocket connection
+		_ = Cancel(ctx) // block until all pages are closed
+		cancel()        // close the websocket connection
 	})
 
 	browser, err := NewBrowser(wctx, wsURL, opts...)
@@ -595,7 +595,7 @@ func (a *RemoteAllocator) Allocate(ctx context.Context, opts ...BrowserOption) (
 		select {
 		case <-browser.closingGracefully:
 		default:
-			Cancel(ctx)
+			_ = Cancel(ctx)
 		}
 	}()
 	return browser, nil

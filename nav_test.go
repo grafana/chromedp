@@ -176,7 +176,7 @@ func TestReload(t *testing.T) {
 	// create test server
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(res http.ResponseWriter, req *http.Request) {
-		fmt.Fprintf(res, `<html>
+		_, _ = fmt.Fprintf(res, `<html>
 <head>
 	<title>Title %d</title>
 </head>
@@ -292,7 +292,7 @@ func TestNavigateContextTimeout(t *testing.T) {
 func writeHTML(content string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		io.WriteString(w, strings.TrimSpace(content))
+		_, _ = io.WriteString(w, strings.TrimSpace(content))
 	})
 }
 

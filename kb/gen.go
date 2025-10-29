@@ -438,7 +438,7 @@ func grab(path string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to get %s: %w", path, err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read %s: %w", path, err)

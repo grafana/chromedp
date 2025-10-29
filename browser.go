@@ -241,7 +241,7 @@ func (b *Browser) execute(ctx context.Context, method string, params, res any) e
 }
 
 func (b *Browser) run(ctx context.Context) {
-	defer b.conn.Close()
+	defer func() { _ = b.conn.Close() }()
 
 	// incomingQueue is the queue of incoming target events, to be routed by
 	// their session ID.
