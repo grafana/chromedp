@@ -227,13 +227,19 @@ func (a *ExecAllocator) Allocate(ctx context.Context, opts ...BrowserOption) (*B
 
 		// Then delete the temporary user data directory, if needed.
 		if removeDir {
-			// Sometimes files/directories are still created in the user data
-			// directory at this point. I can not reproduce it with strace, so
-			// the reason is unknown yet. As a workaround, we will just wait a
-			// little while before removing the directory.
-			<-time.After(10 * time.Millisecond)
-			if err := os.RemoveAll(dataDir); c.cancelErr == nil {
-				c.cancelErr = err
+			// Chrome child processes (GPU, renderer, etc.) may linger briefly
+			// after the browser process exits and hold files open in the user
+			// data directory. Retry removal to handle this.
+			var removeErr error
+			for i := 0; i < 10; i++ {
+				<-time.After(10 * time.Millisecond)
+				removeErr = os.RemoveAll(dataDir)
+				if removeErr == nil {
+					break
+				}
+			}
+			if removeErr != nil && c.cancelErr == nil {
+				c.cancelErr = removeErr
 			}
 		}
 		a.wg.Done()
