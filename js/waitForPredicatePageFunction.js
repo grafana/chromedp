@@ -46,6 +46,10 @@ async function waitForPredicatePageFunction(predicateBody, polling, timeout, ...
     async function pollRaf() {
         let fulfill;
         const result = new Promise((x) => (fulfill = x));
+        // Fallback: resolve directly on timeout in case RAF is throttled
+        // (e.g., Chrome headless mode with idle pages).
+        if (timeout)
+            setTimeout(fulfill, timeout);
         await onRaf();
         return result;
 

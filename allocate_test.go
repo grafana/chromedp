@@ -14,6 +14,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/chromedp/cdproto/target"
 )
 
 func TestExecAllocator(t *testing.T) {
@@ -188,11 +190,26 @@ func TestRemoteAllocator(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				_, port, err := net.SplitHostPort(u.Host)
+				chromeHost, port, err := net.SplitHostPort(u.Host)
 				if err != nil {
 					t.Fatal(err)
 				}
-				u.Host = net.JoinHostPort(h, port)
+				// Use the hostname only when it resolves to the address
+				// Chrome's debug port is actually bound to. Chrome 112+ binds
+				// the debug port to loopback (127.0.0.1) only, so on machines
+				// where the hostname resolves to a different address (e.g.
+				// Tailscale or LAN IPs) we fall back to Chrome's actual address
+				// so the test still exercises the non-devtools URL path.
+				host := chromeHost
+				if addrs, err := net.LookupHost(h); err == nil {
+					for _, addr := range addrs {
+						if addr == chromeHost {
+							host = h
+							break
+						}
+					}
+				}
+				u.Host = net.JoinHostPort(host, port)
 				u.Path = "/"
 				return u.String()
 			},
@@ -214,7 +231,7 @@ func TestRemoteAllocator(t *testing.T) {
 }
 
 func testRemoteAllocator(t *testing.T, modifyURL func(wsURL string) string, wantErr string, opts []RemoteAllocatorOption) {
-	tempDir := t.TempDir()
+	tempDir := tempDirWithCleanup(t)
 
 	procCtx, procCancel := context.WithCancel(context.Background())
 	defer procCancel()
@@ -252,27 +269,30 @@ func testRemoteAllocator(t *testing.T, modifyURL func(wsURL string) string, want
 		// This used to crash when used with RemoteAllocator.
 		WithLogf(func(format string, args ...any) {}),
 	)
+	defer taskCancel()
 
-	{
-		infos, err := Targets(taskCtx)
-		if len(wantErr) > 0 {
-			if err == nil || !strings.Contains(err.Error(), wantErr) {
-				t.Fatalf("\ngot error:\n\t%v\nwant error contains:\n\t%s", err, wantErr)
-			}
+	infos, err := Targets(taskCtx)
+	if len(wantErr) > 0 {
+		if err == nil || !strings.Contains(err.Error(), wantErr) {
+			t.Fatalf("\ngot error:\n\t%v\nwant error contains:\n\t%s", err, wantErr)
+		}
 
-			procCancel()
-			_ = cmd.Wait()
-			return
-		}
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(infos) > 1 {
-			t.Fatalf("expected Targets on a new RemoteAllocator context to return at most one, got: %d", len(infos))
+		procCancel()
+		_ = cmd.Wait()
+		return
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	var pages []*target.Info
+	for _, info := range infos {
+		if info.Type == "page" {
+			pages = append(pages, info)
 		}
 	}
-
-	defer taskCancel()
+	if len(pages) > 1 {
+		t.Fatalf("expected Targets on a new RemoteAllocator context to return at most one, got: %d", len(pages))
+	}
 	want := "insert"
 	var got string
 	if err := Run(taskCtx,
@@ -291,17 +311,30 @@ func testRemoteAllocator(t *testing.T, modifyURL func(wsURL string) string, want
 
 	// Check that cancel closed the tabs. Don't just count the
 	// number of targets, as perhaps the initial blank tab hasn't
-	// come up yet.
+	// come up yet. Retry briefly: Chrome may not have purged the
+	// target from its list immediately after the close completes.
 	targetsCtx, targetsCancel := NewContext(allocCtx)
 	defer targetsCancel()
-	infos, err := Targets(targetsCtx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, info := range infos {
-		if info.TargetID == targetID {
-			t.Fatalf("target from previous iteration wasn't closed: %v", targetID)
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		infos, err = Targets(targetsCtx)
+		if err != nil {
+			t.Fatal(err)
 		}
+		found := false
+		for _, info := range infos {
+			if info.TargetID == targetID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("target wasn't closed after cancel: %v", targetID)
+		}
+		time.Sleep(50 * time.Millisecond)
 	}
 	targetsCancel()
 
@@ -332,17 +365,14 @@ func TestExecAllocatorMissingWebsocketAddr(t *testing.T) {
 	t.Parallel()
 
 	allocCtx, cancel := NewExecAllocator(context.Background(),
-		// Use a bad listen address, so Chrome exits straight away.
-		append([]ExecAllocatorOption{Flag("remote-debugging-address", "_")},
+		// Use --version so Chrome exits straight away without starting a server.
+		append([]ExecAllocatorOption{Flag("version", true)},
 			allocOpts...)...)
 	defer cancel()
 
 	ctx, cancel := NewContext(allocCtx)
 	defer cancel()
 
-	// set the "s" flag to let "." match "\n"
-	// in GitHub Actions, the error text could be:
-	// "chrome failed to start:\n/bin/bash: /etc/profile.d/env_vars.sh: Permission denied\nmkdir: cannot create directory ‘/run/user/1001’: Permission denied\n[0321/081807.491906:ERROR:headless_shell.cc(720)] Invalid devtools server address\n"
 	want := `failed to start`
 	got := fmt.Sprintf("%v", Run(ctx))
 	if !strings.Contains(got, want) {
@@ -357,7 +387,7 @@ func TestCombinedOutput(t *testing.T) {
 	allocCtx, cancel := NewExecAllocator(context.Background(),
 		append([]ExecAllocatorOption{
 			CombinedOutput(buf),
-			Flag("enable-logging", true),
+			Flag("enable-logging", "stderr"),
 		}, allocOpts...)...)
 	defer cancel()
 
@@ -386,9 +416,9 @@ func TestCombinedOutputError(t *testing.T) {
 	// never signal it's done.
 	buf := new(bytes.Buffer)
 	allocCtx, cancel := NewExecAllocator(context.Background(),
-		// Use a bad listen address, so Chrome exits straight away.
+		// Use --version so Chrome exits straight away without starting a server.
 		append([]ExecAllocatorOption{
-			Flag("remote-debugging-address", "_"),
+			Flag("version", true),
 			CombinedOutput(buf),
 		}, allocOpts...)...)
 	defer cancel()

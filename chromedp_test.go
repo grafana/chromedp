@@ -62,6 +62,14 @@ func init() {
 	// and can slightly speed up the tests on other systems.
 	allocOpts = append(allocOpts, DisableGPU)
 
+	// Prevent RAF throttling in headless mode so tests that rely on
+	// requestAnimationFrame (e.g. WebGL rendering) work correctly.
+	allocOpts = append(allocOpts,
+		Flag("disable-renderer-backgrounding", true),
+		Flag("disable-background-timer-throttling", true),
+		Flag("disable-backgrounding-occluded-windows", true),
+	)
+
 	if noHeadless := os.Getenv("CHROMEDP_NO_HEADLESS"); noHeadless != "" && noHeadless != "false" {
 		allocOpts = append(allocOpts, Flag("headless", false))
 	}
@@ -100,6 +108,26 @@ func TestMain(m *testing.M) {
 	}
 
 	os.Exit(code)
+}
+
+// tempDirWithCleanup creates a temp directory and registers a cleanup that
+// retries removal to handle Chrome child processes that linger after the parent
+// exits and hold files open in the user-data-dir.
+func tempDirWithCleanup(t *testing.T) string {
+	t.Helper()
+	dir, err := os.MkdirTemp("", "chromedp-test-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		for i := 0; i < 10; i++ {
+			if err := os.RemoveAll(dir); err == nil {
+				return
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+	})
+	return dir
 }
 
 var allocateOnce sync.Once
@@ -189,7 +217,7 @@ func checkTargets(tb testing.TB, ctx context.Context, want int) {
 	}
 	var pages []*target.Info
 	for _, info := range infos {
-		if info.Type == "page" {
+		if info.Type == "page" && info.Attached {
 			pages = append(pages, info)
 		}
 	}
@@ -896,7 +924,7 @@ func TestBrowserContext(t *testing.T) {
 				ActionFunc(func(ctx context.Context) error {
 					c := FromContext(ctx)
 					var err error
-					ids, err = target.GetBrowserContexts().Do(cdp.WithExecutor(ctx, c.Browser))
+					ids, _, err = target.GetBrowserContexts().Do(cdp.WithExecutor(ctx, c.Browser))
 					return err
 				}),
 			); err != nil {
@@ -1031,7 +1059,7 @@ func TestDownloadIntoDir(t *testing.T) {
 func TestGracefulBrowserShutdown(t *testing.T) {
 	t.Parallel()
 
-	dir := t.TempDir()
+	dir := tempDirWithCleanup(t)
 
 	// TODO(mvdan): this doesn't work with DefaultExecAllocatorOptions+UserDataDir
 	opts := []ExecAllocatorOption{
@@ -1412,14 +1440,19 @@ func TestRunResponse_noResponse(t *testing.T) {
 	}
 }
 
-// TestWebGL tests that WebGL is correctly configured in headless-shell.
+// TestWebGL tests that WebGL is correctly configured in headless mode.
 //
 // This is a regress test for https://github.com/chromedp/chromedp/issues/1073.
 func TestWebGL(t *testing.T) {
 	t.Parallel()
 
-	ctx, cancel := testAllocate(t, "webgl.html")
+	// Use a dedicated browser so the tab is in the foreground; background tabs
+	// in a shared browser get RAF throttled even with disabling flags.
+	ctx, cancel := testAllocateSeparate(t)
 	defer cancel()
+	if err := Run(ctx, Navigate(testdataDir+"/webgl.html")); err != nil {
+		t.Fatal(err)
+	}
 
 	var buf []byte
 	if err := Run(ctx,

@@ -372,10 +372,15 @@ func (c *Context) newTarget(ctx context.Context) error {
 			c.browserContextOwner = true
 			c.createBrowserContextParams = nil
 		}
-		c.targetID, err = target.
-			CreateTarget("about:blank").
-			WithBrowserContextID(c.BrowserContextID).
-			Do(browserExecutor)
+		createTarget := target.CreateTarget("about:blank")
+		if c.BrowserContextID != "" {
+			// WithNewWindow is required in Chrome 112+ headless mode when
+			// creating a target in a non-default browser context.
+			createTarget = createTarget.
+				WithBrowserContextID(c.BrowserContextID).
+				WithNewWindow(true)
+		}
+		c.targetID, err = createTarget.Do(browserExecutor)
 		if err != nil {
 			return err
 		}

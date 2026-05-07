@@ -53,6 +53,26 @@ func resolveHost(ctx context.Context, host string) (string, error) {
 		return "", err
 	}
 
+	// Prefer IPv4 addresses, then non-link-local IPv6, then link-local IPv6.
+	// Link-local IPv6 (fe80::/10) requires a zone ID to connect to, but
+	// zone IDs are dropped by net.JoinHostPort, making them unusable in URLs.
+	// IPv4 is also preferred because Chrome's default debug address (0.0.0.0)
+	// is IPv4-only, so an IPv6 address may not reach it.
+	var best string
+	for _, addr := range addrs {
+		if addr.IP.IsLinkLocalUnicast() {
+			continue
+		}
+		if addr.IP.To4() != nil {
+			return addr.IP.String(), nil
+		}
+		if best == "" {
+			best = addr.IP.String()
+		}
+	}
+	if best != "" {
+		return best, nil
+	}
 	return addrs[0].IP.String(), nil
 }
 

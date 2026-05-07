@@ -176,6 +176,10 @@ func TestReload(t *testing.T) {
 	// create test server
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(res http.ResponseWriter, req *http.Request) {
+		if req.URL.Path != "/" {
+			http.NotFound(res, req)
+			return
+		}
 		_, _ = fmt.Fprintf(res, `<html>
 <head>
 	<title>Title %d</title>
