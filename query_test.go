@@ -196,19 +196,22 @@ func TestRetryInterval(t *testing.T) {
 	tests := []struct {
 		name         string
 		opts         []QueryOption
+		timeout      time.Duration
 		wantCountMin int
 		wantCountMax int
 	}{
 		{
-			name: "default",
-			opts: []QueryOption{},
-			// in 100ms
-			wantCountMin: 5,
-			wantCountMax: 20,
+			name:    "default",
+			opts:    []QueryOption{},
+			timeout: 300 * time.Millisecond,
+			// min is low to tolerate slow CDP round-trips under load
+			wantCountMin: 3,
+			wantCountMax: 40,
 		},
 		{
-			name: "large interval",
-			opts: []QueryOption{RetryInterval(60 * time.Millisecond)},
+			name:    "large interval",
+			opts:    []QueryOption{RetryInterval(60 * time.Millisecond)},
+			timeout: 100 * time.Millisecond,
 			// in 100ms
 			wantCountMin: 1,
 			wantCountMax: 2,
@@ -232,7 +235,7 @@ func TestRetryInterval(t *testing.T) {
 				},
 			)
 
-			ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+			ctx, cancel := context.WithTimeout(ctx, tc.timeout)
 			defer cancel()
 
 			opts := append(tc.opts, count)

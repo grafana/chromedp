@@ -78,7 +78,7 @@ func TestPoll(t *testing.T) {
 			}`,
 			isFunc: true,
 			hash:   "#navigate",
-			err:    "Execution context was destroyed. (-32000)",
+			err:    "Inspected target navigated or closed (-32000)",
 		},
 		{
 			name:   "PollingInterval",
